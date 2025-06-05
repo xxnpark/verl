@@ -47,6 +47,30 @@ def compute_advantage(data: DataProto, adv_estimator, config):
         advantages, returns = prime_core_algos.compute_rloo_advantage_return(data, response_mask, config.actor_rollout_ref.rollout.n, config)
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
+    elif adv_estimator == "grpo":
+        responses = data.batch["responses"]
+        response_length = responses.size(-1)
+        attention_mask = data.batch["attention_mask"]
+        response_mask = attention_mask[:, -response_length:]
+        advantages, returns = prime_core_algos.compute_grpo_advantage_return(data, response_mask, config.actor_rollout_ref.rollout.n, config)
+        data.batch["advantages"] = advantages
+        data.batch["returns"] = returns
+    elif adv_estimator == "fixed_grpo_1":
+        responses = data.batch["responses"]
+        response_length = responses.size(-1)
+        attention_mask = data.batch["attention_mask"]
+        response_mask = attention_mask[:, -response_length:]
+        advantages, returns = prime_core_algos.compute_fixed_grpo_1_advantage_return(data, response_mask, config.actor_rollout_ref.rollout.n, config)
+        data.batch["advantages"] = advantages
+        data.batch["returns"] = returns
+    elif adv_estimator == "fixed_grpo_2":
+        responses = data.batch["responses"]
+        response_length = responses.size(-1)
+        attention_mask = data.batch["attention_mask"]
+        response_mask = attention_mask[:, -response_length:]
+        advantages, returns = prime_core_algos.compute_fixed_grpo_2_advantage_return(data, response_mask, config.actor_rollout_ref.rollout.n, config)
+        data.batch["advantages"] = advantages
+        data.batch["returns"] = returns
     else:
         raise NotImplementedError
     return data
