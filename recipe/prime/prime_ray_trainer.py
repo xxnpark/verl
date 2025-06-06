@@ -184,8 +184,8 @@ class RayPRIMETrainer(RayPPOTrainer):
             role_worker_mapping,
             resource_pool_manager,
             ray_worker_group_cls,
-            reward_fn,
-            val_reward_fn,
+            reward_fn=reward_fn,
+            val_reward_fn=val_reward_fn,
         )
 
         self.use_critic = False
