@@ -224,6 +224,54 @@ def compute_fixed_grpo_2_advantage_return(data: verl.DataProto, response_mask: t
         return advantages, returns
 
 
+def compute_fixed_grpo_3_advantage_return(data: verl.DataProto, response_mask: torch.Tensor, n_samples, config):
+    reward_tensors = []
+
+    with torch.no_grad():
+        if "rm_scores" in data.batch.keys() and config.algorithm.reward_dpo_coef != 0.0:
+            reward_tensor = data.batch["rm_scores"]
+            reward_mask = response_mask.bool()
+
+            reward_tensors.append((reward_tensor * reward_mask) * config.algorithm.reward_dpo_coef)
+
+        if "acc" in data.batch.keys() and config.algorithm.reward_gt_coef != 0.0:
+            reward_tensor = torch.zeros_like(response_mask, dtype=torch.float32)
+            reward_mask = torch.zeros_like(response_mask, dtype=torch.bool)
+
+            prompt_ids = data.batch["prompts"]
+            prompt_length = prompt_ids.shape[-1]
+            valid_response_length = data.batch["attention_mask"][:, prompt_length:].sum(-1)
+
+            reward_mask[
+                torch.arange(0, valid_response_length.shape[0], dtype=torch.long, device=valid_response_length.device),
+                valid_response_length - 1,
+            ] = True
+            reward_tensor[
+                torch.arange(0, valid_response_length.shape[0], dtype=torch.long, device=valid_response_length.device),
+                valid_response_length - 1,
+            ] = data.batch["acc"]
+
+            reward_tensors.append((reward_tensor * reward_mask) * config.algorithm.reward_gt_coef)
+
+        final_reward_tensor = sum(reward_tensors)
+
+        returns = (final_reward_tensor * response_mask).flip(dims=[-1]).cumsum(dim=-1).flip(dims=[-1])
+
+        sum_i = (final_reward_tensor * response_mask).sum(dim=1)
+        count_i = response_mask.sum(dim=1)
+        sum_all = sum_i.sum()
+        count_all = count_i.sum()
+
+        loo_rewards = (sum_all - sum_i) / (count_all - count_i)
+        loo_lengths = (count_all - count_i) / (response_mask.shape[0] - 1)
+        positions = response_mask.cumsum(dim=-1) - 1
+
+        advantages = returns.clone() - (loo_lengths.unsqueeze(-1) - positions) * loo_rewards.unsqueeze(-1)
+        advantages = verl_F.masked_whiten(advantages, response_mask)
+
+        return advantages, returns
+
+
 def compute_ce_dpo_loss_rm(token_level_scores, acc, response_mask, beta):
     cur_scores = ((token_level_scores * response_mask).sum(dim=1) * beta).sigmoid()
     cur_dpo_loss = torch.nn.functional.binary_cross_entropy(cur_scores, acc)

@@ -92,6 +92,7 @@ class AdvantageEstimator(str, Enum):
     GRPO_PASSK = "grpo_passk"
     FIXED_GRPO_1 = "fixed_grpo_1"
     FIXED_GRPO_2 = "fixed_grpo_2"
+    FIXED_GRPO_3 = "fixed_grpo_3"
 
 
 @dataclass
@@ -404,6 +405,7 @@ class RayPPOTrainer:
             AdvantageEstimator.GRPO,
             AdvantageEstimator.FIXED_GRPO_1,
             AdvantageEstimator.FIXED_GRPO_2,
+            AdvantageEstimator.FIXED_GRPO_3,
             AdvantageEstimator.GRPO_PASSK,
             AdvantageEstimator.REINFORCE_PLUS_PLUS,
             AdvantageEstimator.REMAX,
